@@ -1,4 +1,5 @@
--- LANG SKIE STORE HUB - Auto Farm Fix (No Damage from NPC)
+-- LANG SKIE STORE HUB - FINAL
+-- Auto Farm Gerak + GodMode Auto + Anti Damage
 
 local player = game:GetService("Players").LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
@@ -10,32 +11,30 @@ local userInputService = game:GetService("UserInputService")
 local coreGui = game:GetService("CoreGui")
 local virtualUser = game:GetService("VirtualUser")
 local players = game:GetService("Players")
+local tweenService = game:GetService("TweenService")
+local replicatedStorage = game:GetService("ReplicatedStorage")
 
 -- ==========================================
--- HITBOX MANIPULATION (Biarpun Kena Hit, Gak Damage)
+-- HITBOX / DAMAGE PROTECTION (GODMODE AUTO)
 -- ==========================================
 
-local function protectFromDamage()
-    -- Method 1: Force Health ke Max
-    humanoid.Health = humanoid.MaxHealth
-    
-    -- Method 2: Disable dead state
-    humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-    
-    -- Method 3: Pindahin hitbox ke atas (di atas NPC)
-    rootPart.CFrame = rootPart.CFrame + Vector3.new(0, 500, 0)
-    wait(0.05)
-    rootPart.CFrame = rootPart.CFrame - Vector3.new(0, 500, 0)
+local function activateGodMode()
+    pcall(function()
+        humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+        humanoid.BreakJointsOnDeath = false
+        humanoid.MaxHealth = 9e9
+        humanoid.Health = 9e9
+    end)
 end
 
--- Loop buat protection tiap frame
-runService.Heartbeat:Connect(function()
-    if farmEnabled then
-        -- Force health max
-        humanoid.Health = humanoid.MaxHealth
-        humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-    end
-end)
+local function deactivateGodMode()
+    pcall(function()
+        humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+        humanoid.BreakJointsOnDeath = true
+        humanoid.MaxHealth = 100
+        humanoid.Health = 100
+    end)
+end
 
 -- ==========================================
 -- GUI LANG SKIE STORE
@@ -46,8 +45,8 @@ screenGui.Parent = coreGui
 screenGui.Name = "LSS_Gui"
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 300, 0, 220)
-mainFrame.Position = UDim2.new(0.5, -150, 0.5, -110)
+mainFrame.Size = UDim2.new(0, 300, 0, 230)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -115)
 mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
 mainFrame.BackgroundTransparency = 0
 mainFrame.BorderSizePixel = 0
@@ -104,7 +103,7 @@ minimizeBtn.MouseButton1Click:Connect(function()
         minimizeBtn.Text = "+"
         scrollFrame.Visible = false
     else
-        mainFrame.Size = UDim2.new(0, 300, 0, 220)
+        mainFrame.Size = UDim2.new(0, 300, 0, 230)
         minimizeBtn.Text = "−"
         scrollFrame.Visible = true
     end
@@ -126,23 +125,36 @@ local scrollFrame = Instance.new("ScrollingFrame")
 scrollFrame.Size = UDim2.new(1, -10, 1, -40)
 scrollFrame.Position = UDim2.new(0, 5, 0, 32)
 scrollFrame.BackgroundTransparency = 1
-scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 300)
+scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 350)
 scrollFrame.Parent = mainFrame
 
 -- ==========================================
--- AUTO FARM (Normal, Tanpa Jarak Jauh)
+-- VARIABEL
 -- ==========================================
 
 local farmEnabled = false
 local farmTarget = nil
 local attackCooldown = 0
+local flyEnabled = false
+local flyBV = nil
+local speedEnabled = false
+local jumpEnabled = false
+local noclipEnabled = false
+local oneHitEnabled = false
+local espEnabled = false
+local espObjects = {}
 
--- Fungsi serang
+-- ==========================================
+-- FUNGSI SERANG
+-- ==========================================
+
 local function doAttack(target)
     if not target or not target:FindFirstChild("HumanoidRootPart") then return end
     
+    -- Click
     virtualUser:ClickButton2(Vector2.new())
     
+    -- Tool
     local tool = character:FindFirstChildWhichIsA("Tool")
     if tool then
         tool:Activate()
@@ -152,14 +164,25 @@ local function doAttack(target)
         end
     end
     
+    -- Remote di character
     for _, remote in ipairs(character:GetDescendants()) do
+        if remote:IsA("RemoteEvent") and remote.Name:lower():find("attack") then
+            pcall(function() remote:FireServer(target.HumanoidRootPart.Position) end)
+        end
+    end
+    
+    -- Remote di ReplicatedStorage
+    for _, remote in ipairs(replicatedStorage:GetDescendants()) do
         if remote:IsA("RemoteEvent") and remote.Name:lower():find("attack") then
             pcall(function() remote:FireServer(target.HumanoidRootPart.Position) end)
         end
     end
 end
 
--- Fungsi cari NPC terdekat
+-- ==========================================
+-- FUNGSI CARI NPC
+-- ==========================================
+
 local function findNearestNPC()
     local nearest = nil
     local dist = math.huge
@@ -168,7 +191,7 @@ local function findNearestNPC()
             if obj ~= character and not players:FindFirstChild(obj.Name) then
                 if obj.Humanoid.Health > 0 then
                     local mag = (obj.HumanoidRootPart.Position - rootPart.Position).Magnitude
-                    if mag < dist and mag < 100 then
+                    if mag < dist and mag < 200 then
                         dist = mag
                         nearest = obj
                     end
@@ -179,7 +202,10 @@ local function findNearestNPC()
     return nearest
 end
 
--- Tombol
+-- ==========================================
+-- TOMBOL
+-- ==========================================
+
 local row = 0
 local col = 0
 local maxCol = 3
@@ -202,33 +228,30 @@ local function createBtn(text, color, cb)
     return btn
 end
 
--- ====== AUTO FARM ======
 createBtn("Auto Farm", Color3.fromRGB(255, 150, 50), function()
     farmEnabled = not farmEnabled
     if farmEnabled then
         farmTarget = findNearestNPC()
-        -- Aktifkan protection
-        humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-        print("[Auto Farm] ON - Target: " .. (farmTarget and farmTarget.Name or "None"))
+        activateGodMode()
+        print("[Auto Farm] ON - Target: " .. (farmTarget and farmTarget.Name or "Tidak ada"))
     else
         farmTarget = nil
-        humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+        deactivateGodMode()
         print("[Auto Farm] OFF")
     end
 end)
 
 createBtn("Fly", Color3.fromRGB(40, 180, 200), function()
+    flyEnabled = not flyEnabled
     if flyEnabled then
-        flyEnabled = false
-        humanoid.PlatformStand = false
-        if flyBV then flyBV:Destroy() end
-    else
-        flyEnabled = true
         humanoid.PlatformStand = true
         flyBV = Instance.new("BodyVelocity")
         flyBV.MaxForce = Vector3.new(10000, 10000, 10000)
         flyBV.Velocity = Vector3.new(0, 0, 0)
         flyBV.Parent = rootPart
+    else
+        humanoid.PlatformStand = false
+        if flyBV then flyBV:Destroy() end
     end
 end)
 
@@ -246,11 +269,12 @@ createBtn("Noclip", Color3.fromRGB(200, 80, 40), function()
 end)
 
 createBtn("GodMode", Color3.fromRGB(200, 200, 50), function()
-    godModeEnabled = not godModeEnabled
     if godModeEnabled then
-        humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+        godModeEnabled = false
+        deactivateGodMode()
     else
-        humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+        godModeEnabled = true
+        activateGodMode()
     end
 end)
 
@@ -265,16 +289,35 @@ createBtn("Teleport", Color3.fromRGB(40, 80, 200), function()
     end
 end)
 
--- ==========================================
--- FLY VARIABLE
--- ==========================================
-local flyEnabled = false
-local flyBV = nil
-local speedEnabled = false
-local jumpEnabled = false
-local noclipEnabled = false
-local godModeEnabled = false
-local oneHitEnabled = false
+createBtn("ESP", Color3.fromRGB(40, 80, 200), function()
+    espEnabled = not espEnabled
+    if espEnabled then
+        for _, plr in ipairs(players:GetPlayers()) do
+            if plr ~= player then
+                local char = plr.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    local esp = Instance.new("BillboardGui")
+                    esp.Size = UDim2.new(0, 120, 0, 30)
+                    esp.AlwaysOnTop = true
+                    esp.Parent = char.HumanoidRootPart
+                    local label = Instance.new("TextLabel")
+                    label.Size = UDim2.new(1, 0, 1, 0)
+                    label.BackgroundTransparency = 1
+                    label.Text = plr.Name
+                    label.TextColor3 = Color3.fromRGB(255, 50, 50)
+                    label.TextScaled = true
+                    label.Parent = esp
+                    table.insert(espObjects, esp)
+                end
+            end
+        end
+    else
+        for _, esp in ipairs(espObjects) do
+            esp:Destroy()
+        end
+        espObjects = {}
+    end
+end)
 
 -- ==========================================
 -- LOOP UTAMA
@@ -314,12 +357,6 @@ runService.Heartbeat:Connect(function()
         humanoid:ChangeState(Enum.HumanoidStateType.Climbing)
     end
     
-    -- GodMode
-    if godModeEnabled then
-        humanoid.Health = humanoid.MaxHealth
-        humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-    end
-    
     -- OneHit
     if oneHitEnabled then
         for _, obj in ipairs(workspace:GetDescendants()) do
@@ -331,11 +368,10 @@ runService.Heartbeat:Connect(function()
         end
     end
     
-    -- ===== AUTO FARM (Normal) + Protection =====
+    -- ===== AUTO FARM (GERAK + SERANG) =====
     if farmEnabled then
-        -- Protection: Health selalu max
-        humanoid.Health = humanoid.MaxHealth
-        humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+        -- GodMode aktif
+        activateGodMode()
         
         -- Cari target baru
         if not farmTarget or not farmTarget:FindFirstChild("Humanoid") or farmTarget.Humanoid.Health <= 0 then
@@ -347,16 +383,16 @@ runService.Heartbeat:Connect(function()
             local myPos = rootPart.Position
             local distance = (targetPos - myPos).Magnitude
             
-            -- Teleport ke target (di atas)
+            -- GERAK ke target (di atas sedikit)
             if distance > 5 then
-                rootPart.CFrame = CFrame.new(targetPos + Vector3.new(0, 5, 0))
+                rootPart.CFrame = CFrame.new(targetPos + Vector3.new(0, 4, 0))
             end
             
-            -- Serang
+            -- SERANG
             attackCooldown = attackCooldown - 0.05
             if attackCooldown <= 0 then
                 doAttack(farmTarget)
-                attackCooldown = 0.2
+                attackCooldown = 0.15
             end
         end
     end
@@ -376,4 +412,4 @@ player.Idled:Connect(function()
     virtualUser:ClickButton2(Vector2.new())
 end)
 
-print("LANG SKIE STORE HUB - Auto Farm Fix (No Damage) Loaded!")
+print("LANG SKIE STORE HUB - FINAL Loaded!")
