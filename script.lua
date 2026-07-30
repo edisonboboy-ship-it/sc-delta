@@ -1,23 +1,41 @@
--- LANG SKIE STORE HUB - Full Speed Hub Copy (Tanpa Key) + Safe Farm + GodMode
-
--- ==========================================
--- COPY SEMUA FITUR SPEED HUB X (Tanpa Key)
--- ==========================================
+-- LANG SKIE STORE HUB - Auto Farm Fix (No Damage from NPC)
 
 local player = game:GetService("Players").LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local rootPart = character:WaitForChild("HumanoidRootPart")
-local mouse = player:GetMouse()
 local workspace = game:GetService("Workspace")
 local runService = game:GetService("RunService")
 local userInputService = game:GetService("UserInputService")
 local coreGui = game:GetService("CoreGui")
 local virtualUser = game:GetService("VirtualUser")
-local tweenService = game:GetService("TweenService")
-local lighting = game:GetService("Lighting")
-local replicatedStorage = game:GetService("ReplicatedStorage")
 local players = game:GetService("Players")
+
+-- ==========================================
+-- HITBOX MANIPULATION (Biarpun Kena Hit, Gak Damage)
+-- ==========================================
+
+local function protectFromDamage()
+    -- Method 1: Force Health ke Max
+    humanoid.Health = humanoid.MaxHealth
+    
+    -- Method 2: Disable dead state
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+    
+    -- Method 3: Pindahin hitbox ke atas (di atas NPC)
+    rootPart.CFrame = rootPart.CFrame + Vector3.new(0, 500, 0)
+    wait(0.05)
+    rootPart.CFrame = rootPart.CFrame - Vector3.new(0, 500, 0)
+end
+
+-- Loop buat protection tiap frame
+runService.Heartbeat:Connect(function()
+    if farmEnabled then
+        -- Force health max
+        humanoid.Health = humanoid.MaxHealth
+        humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+    end
+end)
 
 -- ==========================================
 -- GUI LANG SKIE STORE
@@ -28,8 +46,8 @@ screenGui.Parent = coreGui
 screenGui.Name = "LSS_Gui"
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 320, 0, 300)
-mainFrame.Position = UDim2.new(0.5, -160, 0.5, -150)
+mainFrame.Size = UDim2.new(0, 300, 0, 220)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -110)
 mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
 mainFrame.BackgroundTransparency = 0
 mainFrame.BorderSizePixel = 0
@@ -82,11 +100,11 @@ minimizeBtn.Parent = titleBar
 minimizeBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
     if minimized then
-        mainFrame.Size = UDim2.new(0, 320, 0, 28)
+        mainFrame.Size = UDim2.new(0, 300, 0, 28)
         minimizeBtn.Text = "+"
         scrollFrame.Visible = false
     else
-        mainFrame.Size = UDim2.new(0, 320, 0, 300)
+        mainFrame.Size = UDim2.new(0, 300, 0, 220)
         minimizeBtn.Text = "−"
         scrollFrame.Visible = true
     end
@@ -108,32 +126,16 @@ local scrollFrame = Instance.new("ScrollingFrame")
 scrollFrame.Size = UDim2.new(1, -10, 1, -40)
 scrollFrame.Position = UDim2.new(0, 5, 0, 32)
 scrollFrame.BackgroundTransparency = 1
-scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 500)
+scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 300)
 scrollFrame.Parent = mainFrame
 
 -- ==========================================
--- FITUR SPEED HUB X (Semua)
+-- AUTO FARM (Normal, Tanpa Jarak Jauh)
 -- ==========================================
 
--- Variabel
-local espEnabled = false
-local espObjects = {}
-local flyEnabled = false
-local flyBV = nil
-local speedEnabled = false
-local jumpEnabled = false
-local noclipEnabled = false
-local godModeEnabled = false
-local oneHitEnabled = false
-local aimbotEnabled = false
-local teleportEnabled = false
-
--- AUTO FARM + GODMODE OTOMATIS
 local farmEnabled = false
 local farmTarget = nil
-local farmDistance = 12
 local attackCooldown = 0
-local godModeAuto = false
 
 -- Fungsi serang
 local function doAttack(target)
@@ -157,7 +159,7 @@ local function doAttack(target)
     end
 end
 
--- Fungsi cari NPC
+-- Fungsi cari NPC terdekat
 local function findNearestNPC()
     local nearest = nil
     local dist = math.huge
@@ -184,8 +186,8 @@ local maxCol = 3
 
 local function createBtn(text, color, cb)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 95, 0, 30)
-    btn.Position = UDim2.new(0, 5 + (col * 100), 0, 5 + (row * 36))
+    btn.Size = UDim2.new(0, 88, 0, 30)
+    btn.Position = UDim2.new(0, 5 + (col * 93), 0, 5 + (row * 36))
     btn.BackgroundColor3 = color or Color3.fromRGB(55, 55, 75)
     btn.Text = text
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -200,48 +202,33 @@ local function createBtn(text, color, cb)
     return btn
 end
 
--- ====== FITUR DASAR ======
-createBtn("ESP", Color3.fromRGB(40, 80, 200), function()
-    espEnabled = not espEnabled
-    if espEnabled then
-        for _, plr in ipairs(players:GetPlayers()) do
-            if plr ~= player then
-                local char = plr.Character
-                if char and char:FindFirstChild("HumanoidRootPart") then
-                    local esp = Instance.new("BillboardGui")
-                    esp.Size = UDim2.new(0, 120, 0, 30)
-                    esp.AlwaysOnTop = true
-                    esp.Parent = char.HumanoidRootPart
-                    local label = Instance.new("TextLabel")
-                    label.Size = UDim2.new(1, 0, 1, 0)
-                    label.BackgroundTransparency = 1
-                    label.Text = plr.Name
-                    label.TextColor3 = Color3.fromRGB(255, 50, 50)
-                    label.TextScaled = true
-                    label.Parent = esp
-                    table.insert(espObjects, esp)
-                end
-            end
-        end
+-- ====== AUTO FARM ======
+createBtn("Auto Farm", Color3.fromRGB(255, 150, 50), function()
+    farmEnabled = not farmEnabled
+    if farmEnabled then
+        farmTarget = findNearestNPC()
+        -- Aktifkan protection
+        humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+        print("[Auto Farm] ON - Target: " .. (farmTarget and farmTarget.Name or "None"))
     else
-        for _, esp in ipairs(espObjects) do
-            esp:Destroy()
-        end
-        espObjects = {}
+        farmTarget = nil
+        humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+        print("[Auto Farm] OFF")
     end
 end)
 
 createBtn("Fly", Color3.fromRGB(40, 180, 200), function()
-    flyEnabled = not flyEnabled
     if flyEnabled then
+        flyEnabled = false
+        humanoid.PlatformStand = false
+        if flyBV then flyBV:Destroy() end
+    else
+        flyEnabled = true
         humanoid.PlatformStand = true
         flyBV = Instance.new("BodyVelocity")
         flyBV.MaxForce = Vector3.new(10000, 10000, 10000)
         flyBV.Velocity = Vector3.new(0, 0, 0)
         flyBV.Parent = rootPart
-    else
-        humanoid.PlatformStand = false
-        if flyBV then flyBV:Destroy() end
     end
 end)
 
@@ -256,25 +243,6 @@ end)
 
 createBtn("Noclip", Color3.fromRGB(200, 80, 40), function()
     noclipEnabled = not noclipEnabled
-end)
-
--- ====== AUTO FARM + GODMODE OTOMATIS ======
-createBtn("Auto Farm", Color3.fromRGB(255, 150, 50), function()
-    farmEnabled = not farmEnabled
-    godModeAuto = farmEnabled -- Aktifkan GodMode otomatis saat farm
-    if farmEnabled then
-        farmTarget = findNearestNPC()
-        -- Aktifkan GodMode
-        godModeEnabled = true
-        humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-        print("[Auto Farm] ON + GodMode Auto ON")
-    else
-        farmTarget = nil
-        -- Matikan GodMode
-        godModeEnabled = false
-        humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
-        print("[Auto Farm] OFF + GodMode Auto OFF")
-    end
 end)
 
 createBtn("GodMode", Color3.fromRGB(200, 200, 50), function()
@@ -297,23 +265,19 @@ createBtn("Teleport", Color3.fromRGB(40, 80, 200), function()
     end
 end)
 
--- ====== FITUR TAMBAHAN SPEED HUB ======
-createBtn("Aimbot", Color3.fromRGB(200, 50, 200), function()
-    aimbotEnabled = not aimbotEnabled
-end)
-
-createBtn("Invis", Color3.fromRGB(150, 150, 200), function()
-    if character:FindFirstChild("Humanoid") then
-        character.Humanoid.Transparency = character.Humanoid.Transparency == 0 and 1 or 0
-    end
-end)
-
-createBtn("Reset", Color3.fromRGB(200, 50, 50), function()
-    humanoid.Health = 0
-end)
+-- ==========================================
+-- FLY VARIABLE
+-- ==========================================
+local flyEnabled = false
+local flyBV = nil
+local speedEnabled = false
+local jumpEnabled = false
+local noclipEnabled = false
+local godModeEnabled = false
+local oneHitEnabled = false
 
 -- ==========================================
--- LOOP UTAMA (Semua fitur)
+-- LOOP UTAMA
 -- ==========================================
 
 runService.Heartbeat:Connect(function()
@@ -350,7 +314,7 @@ runService.Heartbeat:Connect(function()
         humanoid:ChangeState(Enum.HumanoidStateType.Climbing)
     end
     
-    -- GodMode (auto atau manual)
+    -- GodMode
     if godModeEnabled then
         humanoid.Health = humanoid.MaxHealth
         humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
@@ -367,24 +331,11 @@ runService.Heartbeat:Connect(function()
         end
     end
     
-    -- Aimbot
-    if aimbotEnabled then
-        local target = findNearestNPC()
-        if target and target:FindFirstChild("HumanoidRootPart") then
-            workspace.CurrentCamera.CFrame = CFrame.new(
-                workspace.CurrentCamera.CFrame.Position,
-                target.HumanoidRootPart.Position
-            )
-        end
-    end
-    
-    -- ===== AUTO FARM + GODMODE OTOMATIS =====
+    -- ===== AUTO FARM (Normal) + Protection =====
     if farmEnabled then
-        -- Pastikan GodMode aktif
-        if not godModeEnabled then
-            godModeEnabled = true
-            humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-        end
+        -- Protection: Health selalu max
+        humanoid.Health = humanoid.MaxHealth
+        humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
         
         -- Cari target baru
         if not farmTarget or not farmTarget:FindFirstChild("Humanoid") or farmTarget.Humanoid.Health <= 0 then
@@ -396,22 +347,17 @@ runService.Heartbeat:Connect(function()
             local myPos = rootPart.Position
             local distance = (targetPos - myPos).Magnitude
             
-            -- Gerak ke target (di atas)
-            if distance > farmDistance then
-                local moveDir = (targetPos - myPos).Unit * (distance - farmDistance)
-                rootPart.CFrame = CFrame.new(myPos + moveDir + Vector3.new(0, 3, 0))
+            -- Teleport ke target (di atas)
+            if distance > 5 then
+                rootPart.CFrame = CFrame.new(targetPos + Vector3.new(0, 5, 0))
             end
             
             -- Serang
-            if distance <= farmDistance + 3 then
-                attackCooldown = attackCooldown - 0.05
-                if attackCooldown <= 0 then
-                    doAttack(farmTarget)
-                    attackCooldown = 0.2
-                end
+            attackCooldown = attackCooldown - 0.05
+            if attackCooldown <= 0 then
+                doAttack(farmTarget)
+                attackCooldown = 0.2
             end
-        else
-            farmTarget = findNearestNPC()
         end
     end
 end)
@@ -430,4 +376,4 @@ player.Idled:Connect(function()
     virtualUser:ClickButton2(Vector2.new())
 end)
 
-print("LANG SKIE STORE HUB - Full Speed Hub Copy Loaded!")
+print("LANG SKIE STORE HUB - Auto Farm Fix (No Damage) Loaded!")
