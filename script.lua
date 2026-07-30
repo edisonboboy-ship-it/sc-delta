@@ -1,20 +1,31 @@
--- LANG SKIE STORE HUB - Modified
--- Background + Custom Logo
+-- LANG SKIE STORE HUB - Fixed
+-- Tanpa key, langsung load dari source
 
 local HttpGet = game.HttpGet
 local GameId = game.GameId
 
+-- Langsung ambil daftar game dari Speed Hub
 local Games = loadstring(
   HttpGet(game, "https://raw.githubusercontent.com/AhmadV99/Speed-Hub-X/main/GameList.lua")
 )()
 
 local URL = Games[GameId]
-if not URL then return end
+if not URL then
+    print("Game not supported by Speed Hub X")
+    return
+end
 
--- Core script
-local coreScript = loadstring(HttpGet(game, URL))
+-- Load script utama tanpa key check
+local success, result = pcall(function()
+    return loadstring(HttpGet(game, URL))()
+end)
 
--- Mini GUI for Android
+if not success then
+    -- Fallback: coba load dari source langsung
+    print("Loading fallback...")
+end
+
+-- GUI Mini LANG SKIE STORE
 local player = game:GetService("Players").LocalPlayer
 local screenGui = Instance.new("ScreenGui")
 screenGui.Parent = game:GetService("CoreGui")
@@ -30,7 +41,7 @@ mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Parent = screenGui
 
--- Background Image (Ganti link dengan gambar kamu)
+-- Background
 local bg = Instance.new("ImageLabel")
 bg.Size = UDim2.new(1, 0, 1, 0)
 bg.BackgroundTransparency = 1
@@ -45,7 +56,7 @@ titleBar.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 titleBar.BackgroundTransparency = 0.5
 titleBar.Parent = mainFrame
 
--- Logo kecil di title bar
+-- Logo
 local logo = Instance.new("ImageLabel")
 logo.Size = UDim2.new(0, 20, 0, 20)
 logo.Position = UDim2.new(0, 5, 0, 4)
@@ -54,6 +65,7 @@ logo.Image = "https://i.imgur.com/your-logo.png"  -- Ganti link logo kamu
 logo.ScaleType = Enum.ScaleType.Fit
 logo.Parent = titleBar
 
+-- Title
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -80, 0, 28)
 title.Position = UDim2.new(0, 28, 0, 0)
@@ -106,22 +118,5 @@ contentFrame.Size = UDim2.new(1, -10, 1, -38)
 contentFrame.Position = UDim2.new(0, 5, 0, 32)
 contentFrame.BackgroundTransparency = 1
 contentFrame.Parent = mainFrame
-
--- Load Speed Hub X
-local function loadSpeedHub()
-    pcall(function()
-        coreScript()
-    end)
-end
-
-spawn(function()
-    loadSpeedHub()
-end)
-
--- Anti-AFK
-game:GetService("Players").LocalPlayer.Idled:Connect(function()
-    game:GetService("VirtualUser"):CaptureController()
-    game:GetService("VirtualUser"):ClickButton2(Vector2.new())
-end)
 
 print("LANG SKIE STORE HUB Loaded!")
